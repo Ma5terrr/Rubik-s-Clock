@@ -1,1 +1,19 @@
-.vscode/settings.json
+# Python caches
+__pycache__/
+*.pyc
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Virtual environments
+env/
+venv/
+.venv/
+
+# IDE settings (VSCode, PyCharm)
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
