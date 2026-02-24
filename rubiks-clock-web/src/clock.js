@@ -5,7 +5,6 @@ const LIGHTSIDE = 0;
 const DARKSIDE = 1;
 
 
-
 class Position {
     constructor (row, col, side) {
         this.row = row; // from 0-2
@@ -30,10 +29,10 @@ class ClockFace {
 class Pins {
     constructor () {
         this.pins = new Map([
-            [1, 0],
-            [2, 0],
-            [3, 0],
-            [4, 0]
+            [1, -1],
+            [2, -1],
+            [3, -1],
+            [4, -1]
         ]); // Initialize all pins to down; 0 - down and 1 - up 
     }
 
@@ -53,7 +52,7 @@ class Pins {
     get otherPins() {
         const other = new Set();
         for (const [pinNumber, state] of this.pins) {
-            if (state == 0) other.add(pinNumber); 
+            if (state == -1) other.add(pinNumber); 
         }
         return other;
     };
@@ -143,30 +142,21 @@ class Clock {
         return swapMap.get(value);
     }
 
+
     swapPins () {
         const original = new Map(this.pins.pins);
         for (const [pinNumber] of original) {
-            this.pins.pins.set(pinNumber, original.get(this.swapValue(pinNumber)));
+            this.pins.pins.set(pinNumber, -original.get(this.swapValue(pinNumber)));
         }
     }
 
-    swapFaces() {
-        const newClocks = new Map();
-        for (const [pos, face] of this.clocks) {
-            const swappedPos = new Position(pos.row, pos.col, pos.side === LIGHTSIDE ? DARKSIDE : LIGHTSIDE);
-            newClocks.set(swappedPos, face);
-        }
-        this.clocks = newClocks;
-    }
 
     turnWheel (wheel, move, mainSide) {
         if (mainSide == 0) {
             this.updateClock(wheel, move);
         } else {
             this.swapPins();
-            this.swapFaces();
-            this.updateClock(this.swapValue(wheel), move);
-            this.swapFaces();
+            this.updateClock(this.swapValue(wheel), -move);
             this.swapPins();
         }       
     }
@@ -203,10 +193,11 @@ class Clock {
 }
 
 
-
-//--- Quick test ---
+// --- Quick test ---
 const clock = new Clock();
-console.log(clock.toString());
 clock.pins.changeState(2, 1);
-clock.turnWheel(2, 3, 0);
+clock.turnWheel(2, 3, 1);
+clock.pins.changeState(2, -1);
+clock.pins.changeState(3, 1);
+clock.turnWheel(3, -2, 0);
 console.log(clock.toString());
