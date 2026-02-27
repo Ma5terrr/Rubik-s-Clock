@@ -17,3 +17,10 @@ venv/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Node modules
+node_modules/
+
+# TypeScript build output
+dist/
+build/
