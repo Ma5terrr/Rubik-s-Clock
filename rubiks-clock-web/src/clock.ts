@@ -4,14 +4,6 @@ type ClockType = "Corner" | "Edge" | "Centre";
 type PinNumber = 1 | 2 | 3 | 4;
 type PinState = -1 | 1;
 
-class Position {
-    constructor (
-        public row: number,
-        public col: number,
-        public side: Side
-    ) {} // No need to assign value as public already does it
-}
-
 class ClockFace {
     constructor (
         public type: ClockType,
@@ -19,7 +11,7 @@ class ClockFace {
         public quadrants: Set<PinNumber>
     ) {}
 
-    changeTime(move: number): void {
+    public changeTime(move: number): void {
         this.time = (((this.time - 1 + move) % 12 + 12) % 12) + 1;
     }
 }
@@ -36,7 +28,7 @@ class Pins {
         ]);
     }
 
-    changeState(pinNumber: PinNumber, pinState: PinState): void {
+    public changeState(pinNumber: PinNumber, pinState: PinState): void {
         this.pins.set(pinNumber, pinState);
     }
 
@@ -73,16 +65,15 @@ const SWAP_MAP: Record<PinNumber | WheelNumber, PinNumber | WheelNumber> = {
     4: 3,
 };
 
-
 type ClockDataType = [number, number, Side, ClockType, number, PinNumber[]];
 
 class Clock {
     pins: Pins;
-    clocks: Map<Position, ClockFace>;
+    clocks: Map<string, ClockFace>;
 
     constructor () {
         this.pins = new Pins();
-        this.clocks = new Map();
+        this.clocks = new Map<string, ClockFace>();
 
         const clockData: ClockDataType[] = [
             [0, 0, "Light", "Corner", 12, [1]],
@@ -106,18 +97,35 @@ class Clock {
         ];
 
         for (const[row, col, side, type, time, quads] of clockData) {
-            const pos: Position = new Position(row, col, side);
+            
             const face: ClockFace = new ClockFace(type, time, new Set(quads));
-            this.clocks.set(pos, face);
+            const key = this.makeKey(row, col, side);
+            this.clocks.set(key, face);
         }
     }
 
-    updateClock (wheel: WheelNumber, move: number): void {
+    // put side first then row then col
+    private makeKey(row: number, col: number, side: Side) {
+        return `${side}:${row}:${col}`;
+    }
+
+    private parseKey(key: string): {side: Side; row: number; col: number} {
+        const [side, row, col] = key.split(":");
+        return {
+            side: side as Side,
+            row: Number(row),
+            col: Number(col),
+        };
+    }
+
+    private updateClock (wheel: WheelNumber, move: number): void {
         const active: Set<PinNumber> = this.pins.activePins;
         const other: Set<PinNumber> = this.pins.otherPins;
 
-        for (const [pos, face] of this.clocks) {
-            if (pos.side === "Light") {
+        for (const [key, face] of this.clocks) {
+            const {side} = this.parseKey(key);
+
+            if (side === "Light") {
                 if (active.has(wheel)) {
                     if (setsIntersect(face.quadrants, active)) {
                         face.changeTime(move);
@@ -130,8 +138,9 @@ class Clock {
             }
         }
 
-        for (const [pos, face] of this.clocks) {
-            if (pos.side === "Dark") {
+        for (const [key, face] of this.clocks) {
+            const {side} = this.parseKey(key);
+            if (side === "Dark") {
                 if (other.has(wheel)) {
                     if (setsIntersect(face.quadrants, other)) {
                         face.changeTime(-move);
@@ -146,11 +155,11 @@ class Clock {
     }
 
     // this union is actually not required but keeping it as its easier to understand 
-    swapValue(value: PinNumber | WheelNumber): PinNumber | WheelNumber {
+    private swapValue(value: PinNumber | WheelNumber): PinNumber | WheelNumber {
         return SWAP_MAP[value];
     }
 
-    swapPins (): void {
+    private swapPins (): void {
         const original: Map<PinNumber, PinState> = new Map(this.pins.pins);
         for (const [pinNumber] of original) {
             this.pins.pins.set(pinNumber, (-1 * original.get(this.swapValue(pinNumber))!) as PinState);
@@ -158,7 +167,7 @@ class Clock {
         }
     }
 
-    turnWheel (wheel: WheelNumber, move: number, mainSide: Side): void {
+    public turnWheel (wheel: WheelNumber, move: number, mainSide: Side): void {
         if (mainSide == "Light") {
             this.updateClock(wheel, move);
         } else {
@@ -168,17 +177,7 @@ class Clock {
         }
     }
 
-    getClockAt(row: number, col: number, side: Side): ClockFace {
-        for (const[pos, face] of this.clocks) {
-            if (pos.row == row && pos.col === col && pos.side === side) {
-                return face;
-            }
-        }
-
-        throw new Error(`Clock not found at ${row}, ${col}, ${side}`);
-    }
-
-    toString(mainSide: Side = "Light"): string {
+    public toString(mainSide: Side = "Light"): string {
         const sides: [Side, Side] = mainSide === "Light"
             ? ["Light", "Dark"]
             : ["Dark", "Light"];
@@ -193,7 +192,8 @@ class Clock {
             for (let r = 0; r < 3; r++) {
                 const rowVals: string[] = [];
                 for (let c = 0; c < 3; c++) {
-                    const t = this.getClockAt(r, c, side).time;
+                    const key = this.makeKey(r, c, side);
+                    const t = this.clocks.get(key)!.time;
                     rowVals.push(String(t).padStart(2));
                 }
                 lines.push(rowVals.join(" "));
